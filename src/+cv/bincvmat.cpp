@@ -4,36 +4,28 @@
  * @ingroup core
  */
 #include "mexopencv.hpp"
+
+#include <vector>
+#include <string.h>
+
 using namespace std;
 using namespace cv;
 
-#include <fstream>
-
-static bool readMatBinary(ifstream& ifs, Mat& in_mat)
+static bool readMatBinary(const Mat& buf, Mat& in_mat)
 {
-    if(!ifs.is_open()){
+    if (buf.isContinuous() == false || buf.type() != CV_8U) {
+        mexErrMsgIdAndTxt("mexopencv:error", "bincvmat input must be uint8 buffer");
         return false;
     }
-
-    int rows, cols, type;
-    ifs.read((char*)(&rows), sizeof(int));
-    if(rows==0){
-        return true;
-    }
-    ifs.read((char*)(&cols), sizeof(int));
-    ifs.read((char*)(&type), sizeof(int));
-
+    const char* b = (const char*)buf.data; 
+    const char* p = b;
+    int rows = *(int*)p; p += sizeof(int);
+    int cols = *(int*)p; p += sizeof(int);
+    int type = *(int*)p; p += sizeof(int);
     in_mat.release();
     in_mat.create(rows, cols, type);
-    ifs.read((char*)(in_mat.data), in_mat.elemSize() * in_mat.total());
-
+    memcpy(in_mat.data, p, b + buf.cols*buf.rows - p);
     return true;
-}
-
-static bool LoadMatBinary(const string& filename, Mat& output)
-{
-    ifstream ifs(filename, ios::binary);
-    return readMatBinary(ifs, output);
 }
 
 /**
@@ -52,10 +44,8 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
     vector<MxArray> rhs(prhs, prhs+nrhs);
 
     // Process
-    string filename(rhs[0].toString());
     Mat img;
-    if (LoadMatBinary(filename, img) == false) {
-        mexErrMsgIdAndTxt("mexopencv:error", "bincvmat failed");
+    if (readMatBinary(rhs[0].toMat(), img)) {
+        plhs[0] = MxArray(img);
     }
-    plhs[0] = MxArray(img);
 }
