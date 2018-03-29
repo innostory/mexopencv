@@ -70,7 +70,7 @@ static mxArray* loadMatBinary(const mxArray* m)
     }
     const char* mp = (const char*)mxGetData(m);
     int rows = *(int*)mp; mp += sizeof(int);
-    if (rows == 0) return NULL;
+    if (rows == 0) return mxCreateDoubleMatrix(0, 0, mxREAL);
     int cols = *(int*)mp; mp += sizeof(int);
     int type = *(int*)mp; mp += sizeof(int);
     int channels = CV_MAT_CN(type);
